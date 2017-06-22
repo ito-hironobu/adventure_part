@@ -41,14 +41,6 @@ cc.Class({
 
         // プレハブを先に生成しておく（出現/消去はactiveを使って操作する）
         this.canvas = cc.find('Canvas');
-        this.character1 = cc.instantiate(this.chara1);
-        this.character2 = cc.instantiate(this.chara2);
-        this.character3 = cc.instantiate(this.chara3);
-        this.canvas.addChild(this.character1);
-        this.canvas.addChild(this.character2);
-        this.canvas.addChild(this.character3);
-        // 各プレハブ（各キャラクタ）を配列に格納
-        this.characters = [this.character1, this.character2, this.character3];
 
         var self = this;
         // JSONファイル読み込み
@@ -66,10 +58,7 @@ cc.Class({
             self.character_on = true;
             self.scenarioRunning = true;
 
-            // キャラをノードにセット
-            var ary_of_chara = self.getArrayOfAppearCharacter();
-            self.setCharacterToNode(ary_of_chara);
-            
+            self.ary_chara_and_node = self.getArrayCharacterAndNode();
         });
         // タッチイベント初期化
         this.setTouchEvent();
@@ -105,8 +94,29 @@ cc.Class({
                     // シナリオのキャラ全部を表示させる
                     for(var i = 0; i < self.total_scenario_num; i++){
                         self.now_character = self.dataJson.story[self.now_story_no].scenario[i].character;
-                        self.characters[self.now_character - 1].active = true;
-                        self.characters[self.now_character - 1].opacity = 255
+                        // キャラプレハブを生成
+                        var chara_no = self.ary_chara_and_node[self.now_scenario_no][0];
+                        switch(chara_no){
+                            case 1:
+                                if(!self.character1){
+                                    self.character1 = cc.instantiate(self.chara1);
+                                    self.canvas.addChild(self.character1);
+                                }
+                                break;
+                            case 2:
+                                if(!self.character2){
+                                    self.character2 = cc.instantiate(self.chara2);
+                                    self.canvas.addChild(self.character2);
+                                }
+                                break;
+                            case 3:
+                                if(!self.character3){
+                                    self.character3 = cc.instantiate(self.chara3);
+                                    self.canvas.addChild(self.character3);
+                                }
+                                break;
+                        }
+                        self.characters[chara_no - 1].opacity = 255;
                     }
 
                     // 今のシナリオのトークを全部表示させる。
@@ -133,17 +143,28 @@ cc.Class({
                     self.talkText.string = "";
                     self.tmp = "";
 
-                    self.character1.active = false;
-                    self.character2.active = false;
-                    self.character3.active = false;
+                    if(self.character1 != undefined){
+                        cc.log(self.character1);
+                        self.character1.destroy();
+                        cc.log(self.character1);
+                    }
+                    if(self.character2 != undefined){
+                        cc.log('bb');
+                        self.character2.destroy();
+                    }
+                    if(self.character3 != undefined){
+                        cc.log('cc');
+                        self.character3.destroy();
+                    }
 
                     self.showCharaFin = false;
                     self.showTextFin = false;
                     self.scenarioRunning = true;
 
-                    // キャラをノードにセット
-                    var ary_of_chara = self.getArrayOfAppearCharacter();
-                    self.setCharacterToNode(ary_of_chara);
+                    // キャラをノードにセット onloadのは消した
+                    //var ary_of_chara = self.getArrayOfAppearCharacter();
+                    //self.setCharacterToNode(ary_of_chara);
+                    self.ary_chara_and_node = self.getArrayCharacterAndNode();
                 }
                 // 以降のイベントも取得する場合はtrueを返す
                 return true;
@@ -164,6 +185,39 @@ cc.Class({
                     this.showCharaFin = true;
                 }
                 
+                if(this.charaTimer == 0){
+                    switch(this.ary_chara_and_node[this.now_scenario_no][0]){
+                        case 1:
+                        cc.log(this.character1);
+                            if(!this.character1){
+                                this.character1 = cc.instantiate(this.chara1);
+                                cc.log(this.character1);
+                                this.canvas.addChild(this.character1);
+                            }
+                            break;
+                        case 2:
+                        cc.log('b');
+                            if(!this.character2){
+                                this.character2 = cc.instantiate(this.chara2);
+                                this.canvas.addChild(this.character2);
+                            }
+                            break;
+                        case 3:
+                        cc.log('c');
+                            if(!this.character3){
+                                this.character3 = cc.instantiate(this.chara3);
+                                this.canvas.addChild(this.character3);
+                            }
+                            break;
+                    }
+                    // 各プレハブ（各キャラクタ）を配列に格納
+                    this.characters = [this.character1, this.character2, this.character3];
+                }
+                
+                // キャラをノードにセット
+                cc.log(this.ary_chara_and_node);
+                this.setCharacterToNode(this.ary_chara_and_node);///////////
+
                 // キャラクタを表示する
                 this.now_character = this.dataJson.story[this.now_story_no].scenario[this.now_scenario_no].character;
                 this.characters[this.now_character - 1].active = true;
@@ -243,37 +297,33 @@ cc.Class({
         this.talkText.string = this.text;
     },
 
-    // 現在のstoryで登場するキャラクターの順番を配列に入れてreturn
-    getArrayOfAppearCharacter: function(){
-        var ary_of_chara = [];
+    // 現在のstoryで登場するキャラクターとノードの順番を配列に入れてreturn
+    getArrayCharacterAndNode: function(){
+        var ary_chara_and_node = [];
         for(var i = 0; i < this.dataJson.story[this.now_story_no].scenario.length; i++){
-            var tmp = this.dataJson.story[this.now_story_no].scenario[i].character;
-            var counter = 0;
-            for(var j = 0; j < ary_of_chara.length; j++){
-                if(tmp == ary_of_chara[j]){ break; }
-                counter++;
-            }
-            if(counter == ary_of_chara.length){
-                ary_of_chara.push(tmp);
-            }
+            var tmp = [
+                this.dataJson.story[this.now_story_no].scenario[i].character,
+                this.dataJson.story[this.now_story_no].scenario[i].node_no
+            ];
+            ary_chara_and_node.push(tmp);
         }
-        return ary_of_chara;
+        return ary_chara_and_node;
     },
     // 登場キャラクタ数に応じて、登場位置を設定
-    setCharacterToNode: function(ary_of_chara){
-        var num = ary_of_chara.length;
-        // 登場キャラ数によって分岐
-        if(num == 1){
-            this.characters[ary_of_chara[0] - 1].x = 0;
-        }else if(num == 2){
-            this.characters[ary_of_chara[0] - 1].x = -200;
-            this.characters[ary_of_chara[1] - 1].x = 200;
-        }else if(num == 3){
-            this.characters[ary_of_chara[0] - 1].x = 0;
-            this.characters[ary_of_chara[1] - 1].x = -350;
-            this.characters[ary_of_chara[2] - 1].x = 350;
+    setCharacterToNode: function(ary_chara_and_node){
+        cc.log(this.characters);
+        if(ary_chara_and_node[this.now_scenario_no][1] == 1){
+            this.characters[ary_chara_and_node[this.now_scenario_no][0] - 1].x = -350;
+        }else if(ary_chara_and_node[this.now_scenario_no][1] == 2){
+            this.characters[ary_chara_and_node[this.now_scenario_no][0] - 1].x = 0;
+        }else if(ary_chara_and_node[this.now_scenario_no][1] == 3){
+            this.characters[ary_chara_and_node[this.now_scenario_no][0] - 1].x = 350;
+        }else if(ary_chara_and_node[this.now_scenario_no][1] == 4){
+            this.characters[ary_chara_and_node[this.now_scenario_no][0] - 1].x = -200;
+        }else if(ary_chara_and_node[this.now_scenario_no][1] == 5){
+            this.characters[ary_chara_and_node[this.now_scenario_no][0] - 1].x = 200;
         }else{
             return;
         }
-    }
+    },
 });
